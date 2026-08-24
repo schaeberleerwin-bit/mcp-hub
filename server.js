@@ -11,7 +11,7 @@ import { ImapFlow } from "imapflow";
 dotenv.config();
 
 const PORT = parseInt(process.env.PORT ?? "3456");
-const VAULT = (process.env.OBSIDIAN_VAULT_PATH ?? "C:/Users/schae/.openclaw/workspace/obsidian-vault").replace(/\\/g, "/");
+const VAULT = (process.env.OBSIDIAN_VAULT_PATH ?? "C:/path/to/vault").replace(/\\/g, "/");
 
 // ──────────────────────────────────────────────
 // Helpers
