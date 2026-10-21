@@ -17,10 +17,15 @@ const VAULT = (process.env.OBSIDIAN_VAULT_PATH ?? "C:/path/to/vault").replace(/\
 // Helpers
 // ──────────────────────────────────────────────
 
-function vaultPath(rel) {
-  const abs = path.resolve(VAULT, rel.endsWith(".md") ? rel : rel + ".md");
-  if (!abs.startsWith(path.resolve(VAULT))) throw new Error("Path traversal denied");
+function insideVault(rel) {
+  const abs = path.resolve(VAULT, rel);
+  const r = path.relative(path.resolve(VAULT), abs);
+  if (r.startsWith("..") || path.isAbsolute(r)) throw new Error("Path traversal denied");
   return abs;
+}
+
+function vaultPath(rel) {
+  return insideVault(rel.endsWith(".md") ? rel : rel + ".md");
 }
 
 function ok(text) {
@@ -86,7 +91,7 @@ function buildServer() {
     "Listet alle Markdown-Dateien im Vault (optional gefiltert nach Ordner)",
     { folder: z.string().optional().describe("Optionaler Unterordner, z.B. '02 Projects'") },
     async ({ folder }) => {
-      const base = folder ? path.join(VAULT, folder) : VAULT;
+      const base = folder ? insideVault(folder) : VAULT;
       const results = [];
       async function walk(dir) {
         const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -483,6 +488,13 @@ function buildServer() {
 
 const app = express();
 const sessions = new Map();
+
+// DNS-Rebinding-Schutz: nur Anfragen an localhost zulassen
+const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`]);
+app.use((req, res, next) => {
+  if (!ALLOWED_HOSTS.has(req.headers.host)) return res.status(403).json({ error: "Host not allowed" });
+  next();
+});
 
 app.get("/health", (_, res) => {
   res.json({ status: "ok", sessions: sessions.size, vault: VAULT });
